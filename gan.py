@@ -5,6 +5,7 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 from six.moves import range
+import matplotlib.pyplot as plt
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = ''
@@ -14,7 +15,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_float('mean', 6.5, '')
 tf.app.flags.DEFINE_float('std', 2.25, '')
 tf.app.flags.DEFINE_integer('batch_size', 100, '')
-tf.app.flags.DEFINE_integer('max_steps', 100000,
+tf.app.flags.DEFINE_integer('max_steps', 50000,
                             'the number of iterations to train')
 tf.app.flags.DEFINE_integer('g_step', 1, '')
 tf.app.flags.DEFINE_integer('d_step', 1, '')
@@ -176,7 +177,7 @@ with tf.Graph().as_default():
     learning_rate = lr
   )
 
-  with tf.name_scope('GNet'):
+  with tf.name_scope('DNet'):
     # data
     d_real_data = tf.random_normal(
       shape = (1, FLAGS.batch_size),
@@ -199,7 +200,9 @@ with tf.Graph().as_default():
       axis = 0
     )
     d_pred = d_net_infer(
-      data = preprocess(d_data)
+      data = preprocess(
+        d_data
+      )
     )
     # label
     d_label = tf.constant(
@@ -227,7 +230,9 @@ with tf.Graph().as_default():
       data = g_gen_input
     )
     dg_pred = d_net_infer(
-      data = preprocess(tf.transpose(g_fake_data))
+      data = preprocess(
+        tf.transpose(g_fake_data)
+      )
     )
     # label
     g_label = tf.ones(
@@ -321,3 +326,11 @@ with tf.Graph().as_default():
         sess.run(inc_global_step_op)
       else:
         sess.run(inc_global_step_op)
+    gen_data = []
+    for idx in range(FLAGS.test_iter):
+      gen_data.append(
+        sess.run(g_fake_data)
+      )
+    gen_data = np.vstack(gen_data)
+    plt.hist(gen_data, bins=50)
+    plt.show()
