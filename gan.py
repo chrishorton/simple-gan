@@ -3,9 +3,9 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-import numpy as np
 from six.moves import range
 import matplotlib.pyplot as plt
+import numpy as np
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = ''
@@ -25,20 +25,21 @@ tf.app.flags.DEFINE_integer('lr_decay_step', 50000,
 tf.app.flags.DEFINE_float('lr_decay_rate', 0.1, 'learning decay rate')
 tf.app.flags.DEFINE_integer('test_interval', 100, '')
 tf.app.flags.DEFINE_integer('test_iter', 200, '')
-tf.app.flags.DEFINE_string('checkpoint_dir', '/tmp/tf-gan/',
+tf.app.flags.DEFINE_string('checkpoint_dir', '~/tmp/tmp/tf-gan/',
                            'directory to save checkpoint')
 tf.app.flags.DEFINE_integer('snapshot_interval', 5000,
                             'save checkpoint every snapshot_interval steps')
 tf.app.flags.DEFINE_string('snapshot_prefix', 'gan-model',
                            'prefix added to checkpoint files')
 
-
+# Discriminator
 class DNet:
   def __init__(self, hidden_size=50, output_size=1):
     self._hidden_size = hidden_size
     self._output_size = output_size
 
   def infer_fn(self, data):
+      # our fully connected layers
     fc1 = tf.layers.dense(
       inputs = data,
       units = self._hidden_size,
@@ -71,6 +72,7 @@ class DNet:
         minval=-1, maxval=1),
       name = 'out'
     )
+    # Out is a scalar between -1,1 to be interpreted as fake vs. real. This is about as milquetoast as a neural net can get.
     return out
 
   def loss_fn(self, logits, labels):
@@ -86,7 +88,8 @@ class DNet:
     # The total loss is defined as the cross entropy loss.
     return cross_entropy_mean
 
-
+# Generating samples now. Going to get the uniformly distributed data samples from input and somehow mimic the
+# normally distributed samples from the real data.
 class GNet:
   def __init__(self, hidden_size=50, output_size=1):
     self._hidden_size = hidden_size
@@ -125,6 +128,7 @@ class GNet:
         minval=-1, maxval=1),
       name = 'out'
     )
+    print(out)
     return out
 
 
@@ -153,7 +157,7 @@ def preprocess(data):
   mean = tf.reduce_mean(
     input_tensor = data,
     axis = 1,
-    keep_dims = True
+    keepdims = True
   )
   diffs = tf.pow(
     data - mean,
@@ -165,7 +169,7 @@ def preprocess(data):
   )
 
 with tf.Graph().as_default():
-  global_step = tf.contrib.framework.get_or_create_global_step()
+  global_step = tf.train.get_or_create_global_step()
   lr = tf.train.exponential_decay(
     learning_rate = FLAGS.base_lr,
     global_step = global_step,
@@ -184,11 +188,13 @@ with tf.Graph().as_default():
       mean = FLAGS.mean,
       stddev = FLAGS.std
     )
+
     d_gen_input = tf.random_uniform(
       shape = (FLAGS.batch_size, 1),
       minval = 0,
       maxval = 1
     )
+
     d_fake_data = g_net_infer(
       data = d_gen_input
     )
